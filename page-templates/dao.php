@@ -22,10 +22,8 @@ class dao {
         }
     
         // HTTPS localhost/self-signed
-	/*
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	*/
     
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -75,8 +73,9 @@ class dao {
         return $this->call_backend("polo/informacoes/", 'POST', ['polo' => $titulos]);
     }
 
-    public function getMaxIdPolo($nome_polo) {
-        return $this->call_backend("polos/quantidade/");
+    public function getPoloIds() {
+        $resp = $this->call_backend("polos/ids/");
+        return $resp ? $resp['polos_ids'] : [];
     }
 
     public function getNomePolo($nome_polo) {

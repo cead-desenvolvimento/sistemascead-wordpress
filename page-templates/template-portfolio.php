@@ -26,11 +26,7 @@
 
 ?>
 
-<!-- <div class="header-image-container parallax-container"> -->
-	<!-- <img class="responsive-img" src="<?php //echo get_bloginfo('template_directory'); ?>/img/institucional-banner.png" /> -->
-	<!-- <img class="responsive-img" src="<?php //echo get_bloginfo('template_directory'); ?>/img/polo.png" /> -->
-<!-- </div> -->
-<div id="portfolio-img" class="header-image-container parallax-container img-banner" style="background-image: url('http://www.cead.ufjf.br/wp-content/uploads/2021/11/polos-3.png');"></div>
+<div id="portfolio-img" class="header-image-container parallax-container img-banner" style="background-image: url('https://www.cead.ufjf.br/wp-content/uploads/2021/11/polos-3.png');"></div>
 
 <div class="portfolio container">
 <div class="section">
@@ -64,7 +60,6 @@
 					</ul>
 				</div>				
 				<hr class="gray-separator">
-				<!-- <?php //the_content(); ?> -->
 				<?php 
 					$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;		
 					$args = array(
@@ -174,8 +169,15 @@
 								<div class="no-margin">
 									<div class="widget content-block"> <br>
 										<span id="map-title" class="color-purple">Digite um local para localizar os polos</span>										
-										<input style="width: 95%; margin-bottom: 5px;margin-top: 40px; height: 37px;border: 1px solid #A3A3A3;border-radius: 18.5px;font-family: Roboto;font-size: 18px;
-										text-indent: 20px;" type="text" onFocus="geolocate()" name="endereco" id="endereco" placeholder="Insira seu endereço...">
+										<input
+										  id="endereco"
+										  type="text"
+										  placeholder="Digite um endereço..."
+										  onfocus="geolocate()"
+										  style="width: 95%; max-width: 600px; height: 37px; border: 1px solid #A3A3A3; border-radius: 18.5px;
+										         font-family: Roboto, sans-serif; font-size: 16px; text-indent: 15px; padding: 0 10px;
+										         display: block; margin: 20px auto;"
+										/>
 										<input style="width: 100%; display: none;" type="submit" id="buscaPolos" value="Buscar Polos Próximos">										
 										<div style="overflow: auto; height: 430px; margin-top: 10px">												
 											<ul id="polo">													
@@ -187,464 +189,356 @@
 						</div>		
 					</div>		
 					<div id="map-divide" class="col s12 m6 l6"> 						
-
-						<?php //while ( have_posts() ) : the_post(); ?>	
-						<?php //the_content(); ?>
-							<div id="map-container">
-								<div id="map_canvas" style="width:100%; height:580px"></div>
-								<div style="clear: both"></div>
-							</div>
-						<?php //wp_link_pages(array('before' => '<p><strong>'.__('Pages:', 'qns').'</strong> ', 'after' => '</p>', 'next_or_number' => 'number')); ?>		
-						<?php //if ( comments_open() ) : comments_template(); endif; ?>
-						<?php //endwhile; ?>
-
-
-
+						<div id="map-container" style="width: 100%; height: 400px;"></div>
 					</div>		
 				</div>
 
-				<!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDh4kLGCeRgUxYj4NPp4BLxZHDTl20I5gQ&sensor=true&libraries=places"></script>				 -->
-				<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCMHA4q5G3-OFO1stMxiXOvJQoK4yrrVx8&sensor=true&libraries=places"></script>				
-				<script src="<?php echo get_bloginfo('template_directory'); ?>/page-templates/data.json"></script>
-				<script src="<?php echo get_bloginfo('template_directory'); ?>/page-templates/markerclusterer.js"></script>
 				<script src="<?php echo get_bloginfo('template_directory'); ?>/js/jquery-2.1.1.min.js"></script>
-				
-				<script type="text/javascript">
-                    function data() {					
-						var d = new Date();
-						var mes = d.getMonth();
-						var resultado;
-						
-						if (mes <= 6) {
-							resultado = d.getFullYear() + '-1'; 
+				<script src="<?php echo get_bloginfo('template_directory'); ?>/page-templates/markerclusterer.js"></script>
+
+				<script>
+					// Ensure global scope for carregaMapa
+					window.carregaMapa = function() {
+						const mapDiv = document.getElementById("map-container");
+						if (!mapDiv) {
+							console.error("Elemento 'map-container' não encontrado.");
+							return;
 						}
-						else {
-							resultado = d.getFullYear() + '-3';
+
+						window.map = new google.maps.Map(mapDiv, {
+							center: { lat: -21.762, lng: -43.349 },
+							zoom: 5,
+							mapTypeId: "roadmap",
+						});
+
+						window.directionsService = new google.maps.DirectionsService();
+
+						// Initialize PlaceAutocompleteElement
+						const autocompleteElement = document.getElementById("endereco");
+						if (!autocompleteElement) {
+							console.error("Elemento 'endereco' não encontrado.");
+							return;
 						}
-						
-						return resultado;
-					}
- 
-					var directionsDisplay;
-                    var directionsService = new google.maps.DirectionsService();
-                    var map;
-                    var autocomplete;
-                    var initLocate
-                    var imagem = "<?php echo get_bloginfo('template_directory'); ?>/images/map-marker-logo.png";
-                    var imagemHome = "<?php echo get_bloginfo('template_directory'); ?>/images/map-home-marker-logo.png";
-                    var mapOptions;
-                    var place; //endereco da pessoa
-                    var marcadorCasa;
 
-                    function carregaMapa() {                        
-                        geolocate();
+						window.autocomplete = autocompleteElement;
 
-                        //verifica se não conseguiu pegar LatLng do navegador
-                        if(initLocate == null){
-                            //centraliza em Patos de Minas por mostrar melhor a localização total dos polos
-                            initLocate = new google.maps.LatLng(-18.588312, -46.513668);
-                        }
+						// Handle place change event
+						autocomplete.addEventListener("gmp-place-changed", () => {
+							const place = autocomplete.place;
+							if (!place || !place.geometry) {
+								window.alert("Local não encontrado");
+								return;
+							}
 
-                        mapOptions = {
-							'center': initLocate,
-							'zoom': 5,
-							'minZoom': 2,
-							'mapTypeId': google.maps.MapTypeId.ROADMAP,
-							'zoomControl': true,
-							'zoomControlOptions': {
-								style: google.maps.ZoomControlStyle.SMALL
-							},
-							'disableDefaultUI': false
-                        };
-                        map = new google.maps.Map(document.getElementById("map_canvas"),mapOptions);
+							if (place.geometry.viewport) {
+								map.fitBounds(place.geometry.viewport);
+							} else {
+								map.setCenter(place.geometry.location);
+								map.setZoom(17);
+							}
 
-						var infowindow = new google.maps.InfoWindow({});
-                        /**
-                         * Percorre os polos plotando no mapa
-                         */
-						var markers = [];
-                        var polo;
+							// Create or update home marker
+							if (window.marcadorCasa) {
+								window.marcadorCasa.position = place.geometry.location;
+							} else {
+								window.marcadorCasa = new google.maps.marker.AdvancedMarkerElement({
+									map: map,
+									position: place.geometry.location,
+									title: "Casa",
+									content: createMarkerContent(window.imagemHome),
+								});
+							}
 
+							// Store place globally
+							window.place = place;
 
+							// Trigger search for nearby locations
+							buscaLocaisProximos(place.geometry.location);
+						});
 
-						for(i = 0; i < polos.length; i++){
-                            polo = polos[i];
+						// Call geolocate to bias map to user's location
+						geolocate();
+					};
 
-                            //alert(polos[0].nome_breve);
-							
-							var marker = new google.maps.Marker({
-                                position: new google.maps.LatLng(polo.latitude,polo.longitude),
-                                map: map,
-                                title: polo.nome + "\nClique para mais informações",
-                                icon: imagem
-                            });
+					// Global variables
+					window.map = null;
+					window.directionsDisplay = null;
+					window.directionsService = null;
+					window.autocomplete = null;
+					window.initLocate = null;
+					window.marcadorCasa = null;
+					window.polos_ordenados = [];
+					window.imagem = "<?php echo get_bloginfo('template_directory'); ?>/images/map-marker-logo.png";
+					window.imagemHome = "<?php echo get_bloginfo('template_directory'); ?>/images/map-home-marker-logo.png";
 
-
-
-				
-							/*** INFOWINDOW ***/
-							google.maps.event.addListener(marker, 'click', (function(marker, i) {
-								return function() {
-                                    //alert(polos[0].nome_breve);
-									
-									//content = '<div class="infowindow"><h5>' + polos[i].nome_breve + '</h5><h6>Cursos oferecidos em ' + data() + 
-										//':</h6> <p>' + cursos[ polos[i].id_polo ].lista + '</p> <p>Endereço:<br>'+ polos[i].end_polo +', '+ polos[i].num_polo +
-										//'<br>Contato: ('+ polos[i].ddd_polo +')'+polos[i].tel_polo+'</p> </div>';
-									
-									content = '<div class="infowindow"><h5>' + polos[i].nome_breve + '</h5><p>Endereço:<br>'+ polos[i].end_polo +
-									', '+ polos[i].num_polo +'<br>Contato: ('+ polos[i].ddd_polo +')'+polos[i].tel_polo+'</p> </div>';
-									
-									infowindow.close();
-									infowindow.setContent(content);
-									infowindow.open(map, marker);
+					function geolocate() {
+						if (navigator.geolocation) {
+							navigator.geolocation.getCurrentPosition(
+								(position) => {
+									const geolocation = new google.maps.LatLng(
+										position.coords.latitude,
+										position.coords.longitude
+									);
+									window.initLocate = geolocation;
+									if (window.map) {
+										window.map.setCenter(geolocation);
+									}
+								},
+								(error) => {
+									console.error("Geolocation error:", error);
 								}
-							})(marker, i));
-							/***/
-							
-							markers.push(marker);	
-						}
-
-                        // Clusterização
-						var markerCluster = new MarkerClusterer(map, markers);		
-						
-						//google.maps.event.addListener( map, 'click', function() { 
-						  //infowindow.open( null, null ); 
-                        //} );
-											
-                        
-                    }google.maps.event.addDomListener(window, 'load', carregaMapa);
-					
-                    
-                    function iniciarAutoComplete(){						
-                        // Auto complete que obriga seleção de objetos do google maps
-                        autocomplete = new google.maps.places.Autocomplete(
-                            /* Input que o endereço será digitado */(document.getElementById('endereco')),
-                            { types: ['geocode'] });
-                        // Quando o usuário seleciona um endereço popula os endereços
-                        google.maps.event.addListener(autocomplete, 'place_changed', function() {
-                            //pega o endereco da pessoa
-                            place = autocomplete.getPlace().geometry.location;
-                            if(directionsDisplay == null){
-                                directionsDisplay = new google.maps.DirectionsRenderer({suppressMarkers : true});
-                            }
-                            directionsDisplay.setMap(null);
-                            centralizaEMarcaCasa(place);
-                            
-                            buscaLocaisProximos(place);
-                            
-                        });
-                    }
-					
-
-					function checkBounds() {    						
-						if(! allowedBounds.contains(map.getCenter())) {
-							var C = map.getCenter();
-							var X = C.lng();
-							var Y = C.lat();
-
-							var AmaxX = allowedBounds.getNorthEast().lng();
-							var AmaxY = allowedBounds.getNorthEast().lat();
-							var AminX = allowedBounds.getSouthWest().lng();
-							var AminY = allowedBounds.getSouthWest().lat();
-
-							if (X < AminX) {X = AminX;}
-							if (X > AmaxX) {X = AmaxX;}
-							if (Y < AminY) {Y = AminY;}
-							if (Y > AmaxY) {Y = AmaxY;}
-
-							map.setCenter(new google.maps.LatLng(Y,X));
+							);
 						}
 					}
-                    
-                    function buscaLocaisProximos(pontoLatLng){						
-                        
-                        var destinos = new Array();
-                        
-                        for(i = 0; i < polos.length; i++){
-                            
-                            polos[i].distanciareal = Math.sqrt(
-                                    Math.pow((pontoLatLng.lat() - polos[i].latitude), 2)+
-                                    Math.pow((pontoLatLng.lng() - polos[i].longitude), 2)
-                            );
-                        }
 
-                        for(var i=0; i<polos.length; i++)
-                        {
-                            polos_ordenados[i] = polos[i];
-                            
-                        }
-                        //alert(polos[0].nome_breve);
-                        //alert(polos_ordenados[0].nome_breve);
-                        
-                        bubbleSort();
+					function createMarkerContent(imageUrl) {
+						const img = document.createElement("img");
+						img.src = imageUrl;
+						img.style.width = "32px"; // Adjust size as needed
+						img.style.height = "32px";
+						return img;
+					}
 
-                        //alert(polos[0].nome_breve);
-                        //alert(polos_ordenados[0].nome_breve);
-                        
-                        for(i = 0; i < polos_ordenados.length; i++){
-                            //destino tem q ter 25 pontos
-                            if(i >= 25) break;
-                              
-                            destinos.push(new google.maps.LatLng(polos_ordenados[i].latitude, polos_ordenados[i].longitude));
-                        }                      
-                        
-                        
-                        var service = new google.maps.DistanceMatrixService();
-                        service.getDistanceMatrix(
-                            {
-                              origins: [pontoLatLng],
-                              destinations: destinos,
-                              travelMode: google.maps.TravelMode.DRIVING,
-                              unitSystem: google.maps.UnitSystem.METRIC,
-                              avoidHighways: false,
-                              avoidTolls: false
-                            }, callback);
-                    }
-                    
-                    function callback(response, status) {						
+					function buscaLocaisProximos(pontoLatLng) {
+						const destinos = [];
 
-                        if (status != google.maps.DistanceMatrixStatus.OK) {
-                            alert('O erro foi: ' + status);
-                        } else {
-							//alert('ta entrando aqui');     // REMOVER
-                            var results = response.rows[0].elements;
-                            
-                            jQuery("#polo").html("");
-                            
-                            for (var j = 0; (j < results.length && j < 25); j++) {
-                                polos_ordenados[j].tempo = results[j].duration.text;
-                                polos_ordenados[j].distancia = results[j].distance.text;
-                                polos_ordenados[j].distanciareal = results[j].distance.value;
-                            }
-                            
-                            for (var i = 25; i < polos.length; i++) {
-                                polos_ordenados[i].tempo = null;
-                                polos_ordenados[i].distancia = null;
-                                polos_ordenados[i].distanciareal = null;
-                            }
-                            
-                            bubbleSort();
-                            
-                            for (var i = 0; i < results.length; i++) {                                
-                                jQuery("#polo").append("<li><input type='hidden' value='"+i+"'>"
-										+"<i class=\"tiny material-icons\">chevron_right</i>"
-										+"<span class='nome-polo'>"+formataTextoLista(polos_ordenados[i].nome)+"</span><br/>"
-                                        +"<span class='distancia-polo'><b>"+polos_ordenados[i].distancia+"</b> até o polo</span>"
-                                        +"<span class='tempo-polo'><b>"+polos_ordenados[i].tempo+"</b> de carro</span></li>");
-                            }
-                            
-                            aplicaEstilo();
-                            
-                            jQuery("#polo li").click(function() {
-                                var indice = jQuery(this).children("input").val();
-                                
-                                caminho(place,new google.maps.LatLng(polos_ordenados[indice].latitude, polos_ordenados[indice].longitude));
-                                
-                            });
-                            
-                        }
-                    }
+						// Calculate approximate distances
+						for (let i = 0; i < window.polos.length; i++) {
+							window.polos[i].distanciareal = Math.sqrt(
+								Math.pow(pontoLatLng.lat() - window.polos[i].latitude, 2) +
+								Math.pow(pontoLatLng.lng() - window.polos[i].longitude, 2)
+							);
+						}
 
-					function formataTextoLista(nome){
-						var texto = nome.split(" ");
-						var resultado = "";						
-						for(i = 0; i < texto.length; i++){							
-							texto[i] = texto[i].toLowerCase();							
-							if((texto[i].length > 2) && !((texto[i].length == 3) && (texto[i].charAt(2) == "s"))){
+						// Copy and sort polos
+						window.polos_ordenados = [...window.polos];
+						bubbleSort();
+
+						// Limit to 25 destinations
+						for (let i = 0; i < window.polos_ordenados.length && i < 25; i++) {
+							destinos.push(
+								new google.maps.LatLng(
+									window.polos_ordenados[i].latitude,
+									window.polos_ordenados[i].longitude
+								)
+							);
+						}
+
+						const service = new google.maps.DistanceMatrixService();
+						service.getDistanceMatrix(
+							{
+								origins: [pontoLatLng],
+								destinations: destinos,
+								travelMode: google.maps.TravelMode.DRIVING,
+								unitSystem: google.maps.UnitSystem.METRIC,
+								avoidHighways: false,
+								avoidTolls: false,
+							},
+							callback
+						);
+					}
+
+					function callback(response, status) {
+						if (status !== google.maps.DistanceMatrixStatus.OK) {
+							alert("O erro foi: " + status);
+							return;
+						}
+
+						const results = response.rows[0].elements;
+						jQuery("#polo").html("");
+
+						for (let j = 0; j < results.length && j < 25; j++) {
+							window.polos_ordenados[j].tempo = results[j].duration.text;
+							window.polos_ordenados[j].distancia = results[j].distance.text;
+							window.polos_ordenados[j].distanciareal = results[j].distance.value;
+						}
+
+						for (let i = 25; i < window.polos.length; i++) {
+							window.polos_ordenados[i].tempo = null;
+							window.polos_ordenados[i].distancia = null;
+							window.polos_ordenados[i].distanciareal = null;
+						}
+
+						bubbleSort();
+
+						for (let i = 0; i < results.length; i++) {
+							jQuery("#polo").append(
+								`<li><input type='hidden' value='${i}'>` +
+								`<i class="tiny material-icons">chevron_right</i>` +
+								`<span class='nome-polo'>${formataTextoLista(window.polos_ordenados[i].nome)}</span><br/>` +
+								`<span class='distancia-polo'><b>${window.polos_ordenados[i].distancia}</b> até o polo</span>` +
+								`<span class='tempo-polo'><b>${window.polos_ordenados[i].tempo}</b> de carro</span></li>`
+							);
+						}
+
+						aplicaEstilo();
+
+						jQuery("#polo li").click(function () {
+							const indice = jQuery(this).children("input").val();
+							caminho(
+								window.place.geometry.location,
+								new google.maps.LatLng(
+									window.polos_ordenados[indice].latitude,
+									window.polos_ordenados[indice].longitude
+								)
+							);
+						});
+					}
+
+					function caminho(origem, destino) {
+						if (!window.directionsDisplay) {
+							window.directionsDisplay = new google.maps.DirectionsRenderer({ suppressMarkers: true });
+						}
+						window.directionsDisplay.setMap(window.map);
+
+						const request = {
+							origin: origem,
+							destination: destino,
+							travelMode: google.maps.TravelMode.DRIVING,
+						};
+
+						window.directionsService.route(request, (response, status) => {
+							if (status === google.maps.DirectionsStatus.OK) {
+								window.directionsDisplay.setDirections(response);
+							} else {
+								alert("Infelizmente não foi reconhecido um caminho de carro até este polo.");
+							}
+						});
+					}
+
+					function bubbleSort() {
+						let swapped;
+						do {
+							swapped = false;
+							for (let i = 0; i < window.polos_ordenados.length - 1; i++) {
+								if (
+									window.polos_ordenados[i].distanciareal > window.polos_ordenados[i + 1].distanciareal &&
+									window.polos_ordenados[i + 1].distanciareal != null
+								) {
+									const temp = window.polos_ordenados[i];
+									window.polos_ordenados[i] = window.polos_ordenados[i + 1];
+									window.polos_ordenados[i + 1] = temp;
+									swapped = true;
+								}
+							}
+						} while (swapped);
+					}
+
+					function formataTextoLista(nome) {
+						const texto = nome.split(" ");
+						let resultado = "";
+						for (let i = 0; i < texto.length; i++) {
+							texto[i] = texto[i].toLowerCase();
+							if (texto[i].length > 2 && !(texto[i].length === 3 && texto[i].charAt(2) === "s")) {
 								resultado += " " + texto[i][0].toUpperCase() + texto[i].slice(1);
-							}else{
+							} else {
 								resultado += " " + texto[i];
 							}
 						}
-						return resultado;
+						return resultado.trim();
 					}
-                    
-                    function bubbleSort(){						
 
-                        var swapped;
-                        //polos_ordenados = polos;						
-                        
-                        do {
-                            swapped = false;
-                            for (i=0; i < polos.length-1; i++) { // verificar
-                                if (polos_ordenados[i].distanciareal > polos_ordenados[i+1].distanciareal && polos_ordenados[i+1].distanciareal != null){
-                                    var temp = polos_ordenados[i];
-                                    polos_ordenados[i] = polos_ordenados[i+1];
-                                    polos_ordenados[i+1] = temp;
-                                    swapped = true;
-                                }
-                            }
-                        } while(swapped);
-                    }
-                    
-                    
-                    function centralizaEMarcaCasa(pontoLatLng){						
+					function aplicaEstilo() {
+						jQuery(".nome-polo").css({ "font-size": "140%" });
+						jQuery("#polo li").css({
+							"padding": "5px 5px 20px 5px",
+							"cursor": "pointer",
+							"width": "100%",
+							"box-shadow": "5px 1px #888888",
+						});
+						jQuery(".tempo-polo").css({ "float": "right" });
+					}
 
-                        map.setZoom(14);
-                        map.panTo(pontoLatLng);
-                        if(marcadorCasa == null){
-                            marcadorCasa = new google.maps.Marker({
-                                position: pontoLatLng,
-                                map: map,
-                                title: "Casa",
-                                icon: imagemHome
-                            });
-                        } else {
-                            marcadorCasa.setPosition(pontoLatLng);
-                        }
-                        
-                    }
-                    
-                    function caminho(origem, destino){						
-						
-                        if(directionsDisplay == null){
-                            directionsDisplay = new google.maps.DirectionsRenderer({suppressMarkers : true});
-                        }
-                        directionsDisplay.setMap(map);
-                        var request = {
-                            origin: origem,
-                            destination: destino,
-                            travelMode: google.maps.TravelMode.DRIVING
-                        };
-                        
-                        directionsService.route(request, function(response, status) {
-                            if (status == google.maps.DirectionsStatus.OK) {
-                                directionsDisplay.setDirections(response);
-                            } else{
-                                alert("Infelizmente não foi reconhecido um caminho de carro até este polo.");
-                            }
-                        });
-                    } 
-                      
-                    // [START region_geolocation]
-                    // Bias the autocomplete object to the user's geographical location,
-                    // as supplied by the browser's 'navigator.geolocation' object.
-                    function geolocate() {						
+					function centralizaEMarcaCasa(pontoLatLng) {
+						window.map.setZoom(14);
+						window.map.panTo(pontoLatLng);
+						if (window.marcadorCasa == null) {
+							window.marcadorCasa = new google.maps.marker.AdvancedMarkerElement({
+								position: pontoLatLng,
+								map: window.map,
+								title: "Casa",
+								content: createMarkerContent(window.imagemHome),
+							});
+						} else {
+							window.marcadorCasa.setPosition(pontoLatLng);
+						}
+					}
 
-                      if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(function(position) {
-                          var geolocation = new google.maps.LatLng(
-                                position.coords.latitude, position.coords.longitude);
-                                if(autocomplete != null){
-                                    autocomplete.setBounds(new google.maps.LatLngBounds(geolocation,geolocation));
-                                }
-                                initLocate = geolocation;
-                        });
-                      }
-                    }
-                    // [END region_geolocation]  
-                    
-                    <?php
+					jQuery(function () {
+						aplicaEstilo();
+
+						jQuery("#buscaPolos").click(function () {
+							if (!window.place || jQuery("#endereco").val() === "") {
+								alert("Por favor, digite um endereço válido.");
+							} else {
+								centralizaEMarcaCasa(window.place.geometry.location);
+								buscaLocaisProximos(window.place.geometry.location);
+							}
+						});
+					});
+
+					<?php
 						$dao = new dao();
 						$polos = $dao->getPolos();
 
-						$polos_json = array();
+						$polos_json = [];
 						$i = 0;
 
 						foreach ($polos as $polo) {
 							if (!empty($polo['latitude']) && !empty($polo['longitude'])) {
-								$polos_json[$i] = array(
-									"nome"         => $polo['nome'],
-									"nome_breve"   => $polo['nome'],
-									"id_polo"      => $polo['id'],
-									"end_polo"     => $polo['logradouro'],
-									"num_polo"     => $polo['numero'],
-									"bairro_polo"  => $polo['bairro'],
-									"tel_polo"     => $polo['telefone'],
-									"ddd_polo"     => $polo['ddd'],
-									"cep_polo"     => $polo['cep'],
-									"email_polo"   => $polo['email'],
-									"latitude"     => $polo['latitude'],
-									"longitude"    => $polo['longitude'],
-									"tempo"        => '',
-									"distancia"    => '',
-									"distanciareal"=> ''
-								);
+								$polos_json[$i] = [
+									"nome" => $polo['nome'],
+									"nome_breve" => $polo['nome'],
+									"id_polo" => $polo['id'],
+									"end_polo" => $polo['logradouro'],
+									"num_polo" => $polo['numero'],
+									"bairro_polo" => $polo['bairro'],
+									"municipio_uf" => $polo['municipio_uf'],
+									"tel_polo" => $polo['telefone_formatado'],
+									"cep_polo" => $polo['cep_formatado'],
+									"email_polo" => $polo['email'],
+									"latitude" => $polo['latitude'],
+									"longitude" => $polo['longitude'],
+									"tempo" => '',
+									"distancia" => '',
+									"distanciareal" => '',
+								];
 								$i++;
 							}
 						}
 
-						echo "var polos = " . json_encode($polos_json) . ";";
-						echo "var polos_ordenados = new Array();";
-						?>
-                    
-                    function aplicaEstilo(){						
-
-                        /* Estilo */
-                        jQuery(".nome-polo").css({
-                            "font-size": "140%"
-                        });
-                        jQuery("#polo li").css({
-                            //"border-top": "1px solid #990000",
-                            //"border-left": "1px solid #990000",
-                            "padding" : "5px 5px 20px 5px",
-                            "cursor": "pointer",
-                            // "width" : "344px",
-                            "width" : "100%",
-                            "box-shadow": "5px 1px #888888"
-                        });
-                        jQuery(".tempo-polo").css({
-                            "float": "right"
-                        });
-						// jQuery("#map-container").css({
-						// 	"-webkit-box-shadow": "rgba(64, 64, 64, 0.5) 0 2px 5px",
-						// 	"-moz-box-shadow": "rgba(64, 64, 64, 0.5) 0 2px 5px",
-						// 	"box-shadow": "rgba(64, 64, 64, 0.1) 0 2px 5px"
-						// });
-						/*
-						jQuery(".infowindow h5").css({
-							"color": "#ae1919",
-							"font-style": "italic"
-						});                                     INLINE linha 169. Estilo não aplica via javascript. verificar.*/
-						
-					}
-                    
-                    jQuery(function() {
-                        
-                        carregaMapa();
-                        
-                        iniciarAutoComplete();
-                        
-                        aplicaEstilo();
-                        
-                        jQuery("#buscaPolos").click(function(){
-                            if(place == null || jQuery("#endereco").val() == "" ){
-                                alert("Por favor, digite um endereço válido.");
-                                
-                            }else{
-                                centralizaEMarcaCasa(place);
-                                buscaLocaisProximos(place);
-                            }
-                        });
-                        
-                    });
+						echo "window.polos = " . json_encode($polos_json) . ";";
+						echo "window.polos_ordenados = new Array();";
+					?>
 
 					<?php
 						$dao = new dao();
-						$num_polos = $dao->getMaxIdPolo();
+						$poloIds = $dao->getPoloIds();
 
-						$cursos_json = array();
-						for ($i = 1; $i <= $num_polos; $i++) {
-							$nomePoloRows = $dao->getNomePolo($i);
+						mb_internal_encoding("UTF-8");
+						mb_http_output("iso-8859-1");
 
-							mb_internal_encoding("UTF-8");
-							mb_http_output("iso-8859-1");
-
+						$cursos_json = [];
+						foreach ($poloIds as $id) {
+							$nomePoloRows = $dao->getNomePolo($id);
 							if (!is_array($nomePoloRows) || count($nomePoloRows) == 0) {
 								continue;
 							}
-							
+
 							$temp = '';
 							foreach ($nomePoloRows as $row) {
 								$temp .= " ✓ " . mb_strtolower($row['nome']) . "<br>";
 							}
-							$cursos_json[$i] = array('lista' => $temp);
+							$cursos_json[$id] = ['lista' => $temp];
 						}
 
-						echo "<script language='javascript' type='text/javascript'>var cursos = " . json_encode($cursos_json) . ";</script>";
+						echo "window.cursos = " . json_encode($cursos_json) . ";";
 					?>
-
 				</script>
+
+				<!-- Load Google Maps API after carregaMapa is defined -->
+				<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCMHA4q5G3-OFO1stMxiXOvJQoK4yrrVx8&libraries=places,marker&callback=carregaMapa"></script>
+
 				<hr class="gray-separator">
 				<hr id="Polo UAB: saiba como ser um parceiro da UFJF" class="anchor">
 				<div class="row">										
@@ -653,8 +547,6 @@
 							<?php 
 								$page = get_page_by_path( 'polo-uab-saiba-como-ser-um-parceiro-da-ufjf-2', '', 'post' );														
 								$content = apply_filters('the_content', $page->post_content);					
-								// echo '<h5 id="'.$page->post_title.'">'. $page->post_title . '</h5>';
-								// echo '<h5>'. $page->post_title . '</h5>';
 								echo '<p class="bold">'. $page->post_title . '</p>';
 							?>							
 						</div>
@@ -673,7 +565,6 @@
 					</div>					
 				</div>
 
-
 			<!-- END .inner-content-wrapper -->
 			</div>
 		<!-- END .main-content -->
@@ -684,7 +575,3 @@
 </div>
 
 <?php get_footer(); ?>
-
-
-<!-- https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_autocomplete -->
-<!-- http://www.devwilliam.com.br/php/autocomplete-com-jquery-ui-php-mysql -->
