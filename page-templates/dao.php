@@ -73,13 +73,8 @@ class dao {
         return $this->call_backend("polo/informacoes/", 'POST', ['polo' => $titulos]);
     }
 
-    public function getPoloIds() {
-        $resp = $this->call_backend("polos/ids/");
-        return $resp ? $resp['polos_ids'] : [];
-    }
-
-    public function getNomePolo($nome_polo) {
-        return $this->call_backend("polo/com-oferta-ativa/" . rawurlencode($nome_polo) . "/");
+    public function getPolosComOfertaAtiva() {
+        return $this->call_backend("polos/com-oferta-ativa/") ?: [];
     }
 
     public function getPolosDoCurso($nome_curso) {

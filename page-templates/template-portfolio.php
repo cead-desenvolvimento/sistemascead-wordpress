@@ -513,23 +513,14 @@
 
 					<?php
 						$dao = new dao();
-						$poloIds = $dao->getPoloIds();
+						$polos = $dao->getPolosComOfertaAtiva();
 
 						mb_internal_encoding("UTF-8");
 						mb_http_output("iso-8859-1");
 
 						$cursos_json = [];
-						foreach ($poloIds as $id) {
-							$nomePoloRows = $dao->getNomePolo($id);
-							if (!is_array($nomePoloRows) || count($nomePoloRows) == 0) {
-								continue;
-							}
-
-							$temp = '';
-							foreach ($nomePoloRows as $row) {
-								$temp .= " ✓ " . mb_strtolower($row['nome']) . "<br>";
-							}
-							$cursos_json[$id] = ['lista' => $temp];
+						foreach ($polos as $polo) {
+							$cursos_json[$polo['id']] = ['lista' => " ✓ " . mb_strtolower($polo['nome']) . "<br>"];
 						}
 
 						echo "window.cursos = " . json_encode($cursos_json) . ";";
